@@ -1,0 +1,89 @@
+using Oakton;
+using Oakton.Resources;
+using Wolverine;
+using Wolverine.EntityFrameworkCore;
+using Wolverine.SqlServer;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
+
+builder.Host.UseWolverine(opts =>
+{
+    // fill in the connection string
+    var connectionString = "";
+    opts.PersistMessagesWithSqlServer(connectionString, "wolverine");
+
+    opts.UseEntityFrameworkCoreTransactions();
+    opts.Policies.AutoApplyTransactions();
+
+    opts.Policies.UseDurableLocalQueues();
+});
+
+builder.Host.UseResourceSetupOnStartup();
+builder.Host.ApplyOaktonExtensions();
+
+var app = builder.Build();
+
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
+
+app.UseHttpsRedirection();
+
+
+app.MapPost("/invoke", async (IMessageBus bus) =>
+    {
+        var command = new TestCommand();
+        await bus.InvokeAsync(command);
+    })
+    .WithName("Invoke")
+    .WithOpenApi();
+
+
+app.MapPost("/publish", async (IMessageBus bus) =>
+    {
+        // this works fine - the event is saved to the database
+        var @event = new TestEvent();
+        await bus.PublishAsync(@event);
+    })
+    .WithName("Publish")
+    .WithOpenApi();
+
+app.Run();
+// return await app.RunOaktonCommands(args);
+
+
+public record TestCommand;
+
+public class TestCommandHandler
+{
+    public async Task Handle(TestCommand command, IMessageBus bus)
+    {
+        Console.WriteLine("Handling TestCommand");
+
+        // I want this event to be saved to the database
+        var @event = new TestEvent();
+        await bus.PublishAsync(@event);
+    }
+}
+
+public record TestEvent;
+
+public class TestEventHandler
+{
+    public Task Handle(TestEvent @event)
+    {
+        Console.WriteLine("Handling TestEvent. But it is not save to database. " +
+                          "So if the application crashes now, the event will be lost.");
+
+        Thread.Sleep(10000);
+
+        Console.WriteLine("TestEvent handled.");
+
+        return Task.CompletedTask;
+    }
+}
