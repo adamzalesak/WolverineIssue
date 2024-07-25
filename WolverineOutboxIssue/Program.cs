@@ -15,9 +15,6 @@ builder.Host.UseWolverine(opts =>
     var connectionString = "";
     opts.PersistMessagesWithSqlServer(connectionString, "wolverine");
 
-    opts.UseEntityFrameworkCoreTransactions();
-    opts.Policies.AutoApplyTransactions();
-
     opts.Policies.UseDurableLocalQueues();
 });
 
