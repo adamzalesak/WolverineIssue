@@ -1,7 +1,6 @@
-using Oakton;
-using Oakton.Resources;
+using Confluent.Kafka;
 using Wolverine;
-using Wolverine.SqlServer;
+using Wolverine.Kafka;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -10,15 +9,20 @@ builder.Services.AddSwaggerGen();
 
 builder.Host.UseWolverine(opts =>
 {
-    // fill in the connection string
-    var connectionString = "";
-    opts.PersistMessagesWithSqlServer(connectionString, "wolverine");
+    opts.UseKafka("")
+        .ConfigureClient(c =>
+        {
+            c.SaslUsername = "";
+            c.SaslPassword = "";
+            c.SaslMechanism = SaslMechanism.Plain;
+            c.SecurityProtocol = SecurityProtocol.SaslSsl;
+        });
 
-    opts.Policies.UseDurableLocalQueues();
+    opts.PublishAllMessages().ToKafkaTopic("topic_0");
+
+    opts.BatchMessagesOf<TestMessage>();
+    opts.ListenToKafkaTopic("topic_0");
 });
-
-builder.Host.UseResourceSetupOnStartup();
-builder.Host.ApplyOaktonExtensions();
 
 var app = builder.Build();
 
@@ -30,30 +34,26 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-
-app.MapPost("/invoke", async (IMessageBus bus) =>
+app.MapPost("/test", async (IMessageBus bus) =>
     {
-        var command = new TestCommand();
-        // TestCommand returned value should not be persisted in inbox
-        var response = await bus.InvokeAsync<string>(command);
-
-        return Results.Ok(response);
+        var message = new TestMessage();
+        await bus.PublishAsync(message);
+        await bus.PublishAsync(message);
+        // results in:
+        // No known handler for TestMessage#08dced0c-3834-b4c6-54d7-e075bf020000 from kafka://topic/topic_0
     })
-    .WithName("Invoke")
     .WithOpenApi();
-
 
 app.Run();
 // return await app.RunOaktonCommands(args);
 
 
-public record TestCommand;
+public record TestMessage;
 
-public class TestCommandHandler
+public class TestMessagesHandler
 {
-    public string Handle(TestCommand command, IMessageBus bus)
+    public void Handle(TestMessage[] messages)
     {
-        // this value is persisted in inbox
-        return "response";
+        Console.WriteLine("Messages received");
     }
 }
