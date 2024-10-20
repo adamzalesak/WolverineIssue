@@ -1,6 +1,7 @@
-using Confluent.Kafka;
+using JasperFx.Core;
+using Oakton.Resources;
 using Wolverine;
-using Wolverine.Kafka;
+using Wolverine.SqlServer;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -9,20 +10,17 @@ builder.Services.AddSwaggerGen();
 
 builder.Host.UseWolverine(opts =>
 {
-    opts.UseKafka("")
-        .ConfigureClient(c =>
-        {
-            c.SaslUsername = "";
-            c.SaslPassword = "";
-            c.SaslMechanism = SaslMechanism.Plain;
-            c.SecurityProtocol = SecurityProtocol.SaslSsl;
-        });
+    // fill in the connection string
+    var connectionString = "";
+    opts.PersistMessagesWithSqlServer(connectionString, "wolverine");
+    
+    // the issue occurs only in Solo durability mode
+    opts.Durability.Mode = DurabilityMode.Solo;
 
-    opts.PublishAllMessages().ToKafkaTopic("topic_0");
-
-    opts.BatchMessagesOf<TestMessage>();
-    opts.ListenToKafkaTopic("topic_0");
+    opts.Policies.UseDurableLocalQueues();
 });
+
+builder.Host.UseResourceSetupOnStartup();
 
 var app = builder.Build();
 
@@ -34,26 +32,43 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+
 app.MapPost("/test", async (IMessageBus bus) =>
     {
-        var message = new TestMessage();
-        await bus.PublishAsync(message);
-        await bus.PublishAsync(message);
-        // results in:
-        // No known handler for TestMessage#08dced0c-3834-b4c6-54d7-e075bf020000 from kafka://topic/topic_0
+        var command = new TestCommand();
+        var response = await bus.InvokeAsync<string>(command);
+
+        return Results.Ok(response);
     })
+    .WithName("Test")
     .WithOpenApi();
+
 
 app.Run();
 // return await app.RunOaktonCommands(args);
 
 
-public record TestMessage;
+public record TestCommand;
 
-public class TestMessagesHandler
+public class TestCommandHandler
 {
-    public void Handle(TestMessage[] messages)
+    public async Task Handle(TestCommand command, IMessageBus bus)
     {
-        Console.WriteLine("Messages received");
+        // this message is persisted in inbox and flushed
+        await bus.PublishAsync(new TestEvent());
+    }
+}
+
+public record TestEvent;
+public class TestEventHandler
+{
+    public async Task Handle(TestEvent @event)
+    {
+        Console.WriteLine("Test event handler started");
+
+        await Task.Delay(30.Seconds());
+        // ! message is already marked as "Handled" in the inbox
+
+        Console.WriteLine("Test event handler finished");
     }
 }
