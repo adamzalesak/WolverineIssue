@@ -1,7 +1,5 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{0462ECCF-6D25-479D-9C47-05F444AD9159}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WolverineIssue", "src\WolverineIssue\WolverineIssue.csproj", "{49239D23-01E5-4526-A941-C254E1EE3B0E}"
 EndProject
 Global

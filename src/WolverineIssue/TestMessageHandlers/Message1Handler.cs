@@ -1,7 +1,7 @@
 ﻿using Wolverine.Attributes;
-using WolverineOutboxIssue.Messages;
+using WolverineIssue.Messages;
 
-namespace WolverineOutboxIssue.TestMessageHandlers;
+namespace WolverineIssue.TestMessageHandlers;
 
 [StickyHandler("queue1")]
 public static class Message1Handler

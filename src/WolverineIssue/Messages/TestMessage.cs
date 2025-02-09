@@ -1,3 +1,3 @@
-﻿namespace WolverineOutboxIssue.Messages;
+﻿namespace WolverineIssue.Messages;
 
 public record TestMessage();

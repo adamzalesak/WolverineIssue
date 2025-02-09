@@ -1,8 +1,8 @@
-﻿using WolverineOutboxIssue.Messages;
+﻿using WolverineIssue.Messages;
 
-namespace WolverineOutboxIssue.AbcMessageHandlers;
+namespace WolverineIssue.AbcMessageHandlers;
 
-// issue #3 - this handler is being ignored
+// issue #2 - this handler is being ignored
 public static class AbcHandler
 {
     public static void Handle(AbcMessage message)

@@ -1,6 +1,6 @@
-﻿using WolverineOutboxIssue.Messages;
+﻿using WolverineIssue.Messages;
 
-namespace WolverineOutboxIssue.TestMessageHandlers;
+namespace WolverineIssue.TestMessageHandlers;
 
 public static class Message3Handler
 {
